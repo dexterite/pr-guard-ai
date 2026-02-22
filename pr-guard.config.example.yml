@@ -1,0 +1,53 @@
+# PR Guard AI - User Configuration
+# Place as: pr-guard.config.yml, pr-guard.config.yaml, or .pr-guard.yml
+# in your repository root to customize behavior.
+
+# Override which checks run and their settings
+checks:
+  code-quality:
+    enabled: true
+    # Add extra instructions to the AI prompt for this check
+    extra_instructions: |
+      Pay special attention to error handling patterns.
+      Our team uses the Result pattern instead of exceptions.
+    # Override file patterns (replaces defaults for this check)
+    # file_patterns:
+    #   - "**/*.py"
+    #   - "**/*.ts"
+    # Add extra exclude patterns (merged with defaults)
+    # exclude_patterns:
+    #   - "**/generated/**"
+
+  sast:
+    enabled: true
+    extra_instructions: |
+      Focus on OWASP Top 10 vulnerabilities.
+
+  secret-detection:
+    enabled: true
+    extra_instructions: |
+      Also check for internal service URLs that should not be committed.
+    # Additional patterns to treat as secrets
+    # custom_secret_patterns:
+    #   - "INTERNAL_SERVICE_URL"
+    #   - "CORP_API_ENDPOINT"
+
+  iac-security:
+    enabled: true
+    extra_instructions: |
+      Ensure all resources use our tagging convention:
+      - environment: dev/staging/prod
+      - team: team-name
+      - cost-center: CC-XXXX
+
+  container-security:
+    enabled: true
+
+# Custom checks directory (path relative to repo root)
+# Each subfolder should contain prompt.md and config.yml
+# custom_checks_dir: .pr-guard/checks
+
+# Global exclude patterns (merged with built-in defaults)
+# exclude_patterns:
+#   - "**/vendor/**"
+#   - "**/third_party/**"

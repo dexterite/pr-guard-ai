@@ -1,0 +1,49 @@
+# Self-test: run PR Guard AI on its own repository
+name: PR Guard AI — Self Test
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      checks:
+        description: "Checks to run"
+        default: "all"
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pr-guard:
+    name: AI Code Review
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history for diff
+
+      - name: Run PR Guard AI
+        uses: ./
+        with:
+          api-key: ${{ secrets.OPENAI_API_KEY }}
+          model: "gpt-4o"
+          checks: ${{ github.event.inputs.checks || 'all' }}
+          diff-only: "true"
+          severity-threshold: "high"
+          output-format: "markdown"
+          ship-to: "github-summary,file"
+          ship-file-path: "pr-guard-report"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-guard-report
+          path: pr-guard-report.*
+          retention-days: 30

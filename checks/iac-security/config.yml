@@ -1,0 +1,49 @@
+# IaC (Infrastructure as Code) Security configuration
+# Covers Terraform, CloudFormation, Kubernetes, Docker Compose, Ansible, Pulumi, Bicep
+file_patterns:
+  # Terraform
+  - "**/*.tf"
+  - "**/*.tfvars"
+  - "**/*.hcl"
+  # CloudFormation
+  - "**/cloudformation/**/*.yml"
+  - "**/cloudformation/**/*.yaml"
+  - "**/cloudformation/**/*.json"
+  - "**/cfn-*.yml"
+  - "**/cfn-*.yaml"
+  - "**/cfn-*.json"
+  # AWS CDK / SAM
+  - "**/template.yml"
+  - "**/template.yaml"
+  - "**/samconfig.toml"
+  # Kubernetes
+  - "**/k8s/**/*.yml"
+  - "**/k8s/**/*.yaml"
+  - "**/kubernetes/**/*.yml"
+  - "**/kubernetes/**/*.yaml"
+  - "**/helm/**/*.yml"
+  - "**/helm/**/*.yaml"
+  - "**/charts/**/*.yml"
+  - "**/charts/**/*.yaml"
+  # Docker Compose
+  - "**/docker-compose*.yml"
+  - "**/docker-compose*.yaml"
+  - "**/compose*.yml"
+  - "**/compose*.yaml"
+  # Ansible
+  - "**/ansible/**/*.yml"
+  - "**/ansible/**/*.yaml"
+  - "**/playbook*.yml"
+  - "**/playbook*.yaml"
+  # Pulumi
+  - "**/Pulumi.yml"
+  - "**/Pulumi.yaml"
+  - "**/Pulumi.*.yml"
+  - "**/Pulumi.*.yaml"
+  # Bicep (Azure)
+  - "**/*.bicep"
+  # GitHub Actions
+  - "**/.github/workflows/*.yml"
+  - "**/.github/workflows/*.yaml"
+
+exclude_patterns: []

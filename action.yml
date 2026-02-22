@@ -1,0 +1,154 @@
+name: "PR Guard AI"
+description: >
+  AI-powered code review — runs language-agnostic security, quality,
+  and compliance checks against your pull requests using any
+  OpenAI-compatible LLM.
+author: "dexterite"
+
+branding:
+  icon: "shield"
+  color: "blue"
+
+# -----------------------------------------------------------------------
+# Inputs — every tuneable parameter is exposed here
+# -----------------------------------------------------------------------
+inputs:
+  api-key:
+    description: "AI API key (OpenAI-compatible). Store as a GitHub secret."
+    required: true
+
+  api-base-url:
+    description: "Base URL for the AI API (OpenAI, Azure OpenAI, Ollama, etc.)"
+    default: "https://api.openai.com/v1"
+    required: false
+
+  model:
+    description: "Model identifier to use for analysis"
+    default: "gpt-4o"
+    required: false
+
+  checks:
+    description: >
+      Comma-separated list of checks to run, or "all".
+      Built-in: code-quality, sast, secret-detection, iac-security, container-security
+    default: "all"
+    required: false
+
+  config-file:
+    description: "Path to a pr-guard.config.yml with per-check overrides"
+    default: ""
+    required: false
+
+  custom-checks-dir:
+    description: "Path to a directory with custom check definitions (prompt.md + config.yml)"
+    default: ""
+    required: false
+
+  diff-only:
+    description: "Analyze only files changed in the PR / push (true/false)"
+    default: "true"
+    required: false
+
+  severity-threshold:
+    description: "Minimum severity that causes a non-zero exit (info, low, medium, high, critical)"
+    default: "high"
+    required: false
+
+  output-format:
+    description: "Report format: markdown, json, or sarif"
+    default: "markdown"
+    required: false
+
+  ship-to:
+    description: >
+      Comma-separated destinations: github-summary, file, webhook, github-pr-comment
+    default: "github-summary"
+    required: false
+
+  ship-webhook-url:
+    description: "Webhook URL for shipping results (used when ship-to includes 'webhook')"
+    default: ""
+    required: false
+
+  ship-file-path:
+    description: "Base file path for the report (used when ship-to includes 'file')"
+    default: "pr-guard-report"
+    required: false
+
+  max-file-size-kb:
+    description: "Skip files larger than this (KB)"
+    default: "100"
+    required: false
+
+  max-context-tokens:
+    description: "Approximate token budget per AI request"
+    default: "100000"
+    required: false
+
+  exclude-patterns:
+    description: "Comma-separated glob patterns to exclude from analysis"
+    default: ""
+    required: false
+
+  github-token:
+    description: "GitHub token (for PR comments). Usually secrets.GITHUB_TOKEN"
+    default: ""
+    required: false
+
+# -----------------------------------------------------------------------
+# Outputs — consumed by downstream steps / jobs
+# -----------------------------------------------------------------------
+outputs:
+  findings-count:
+    description: "Total number of findings across all checks"
+    value: ${{ steps.run-prguard.outputs.findings-count }}
+
+  critical-count:
+    description: "Number of critical-severity findings"
+    value: ${{ steps.run-prguard.outputs.critical-count }}
+
+  report-path:
+    description: "Path to the generated report file (if ship-to includes 'file')"
+    value: ${{ steps.run-prguard.outputs.report-path }}
+
+  exit-code:
+    description: "0 = pass, 1 = findings at or above threshold"
+    value: ${{ steps.run-prguard.outputs.exit-code }}
+
+# -----------------------------------------------------------------------
+# Composite run
+# -----------------------------------------------------------------------
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      shell: bash
+      run: pip install -q -r "${{ github.action_path }}/requirements.txt"
+
+    - name: Run PR Guard AI
+      id: run-prguard
+      shell: bash
+      env:
+        PRGUARD_API_KEY:           ${{ inputs.api-key }}
+        PRGUARD_API_BASE_URL:      ${{ inputs.api-base-url }}
+        PRGUARD_MODEL:             ${{ inputs.model }}
+        PRGUARD_CHECKS:            ${{ inputs.checks }}
+        PRGUARD_CONFIG_FILE:       ${{ inputs.config-file }}
+        PRGUARD_CUSTOM_CHECKS_DIR: ${{ inputs.custom-checks-dir }}
+        PRGUARD_DIFF_ONLY:         ${{ inputs.diff-only }}
+        PRGUARD_SEVERITY_THRESHOLD: ${{ inputs.severity-threshold }}
+        PRGUARD_OUTPUT_FORMAT:     ${{ inputs.output-format }}
+        PRGUARD_SHIP_TO:           ${{ inputs.ship-to }}
+        PRGUARD_SHIP_WEBHOOK_URL:  ${{ inputs.ship-webhook-url }}
+        PRGUARD_SHIP_FILE_PATH:    ${{ inputs.ship-file-path }}
+        PRGUARD_MAX_FILE_SIZE_KB:  ${{ inputs.max-file-size-kb }}
+        PRGUARD_MAX_CONTEXT_TOKENS: ${{ inputs.max-context-tokens }}
+        PRGUARD_EXCLUDE_PATTERNS:  ${{ inputs.exclude-patterns }}
+        PRGUARD_GITHUB_TOKEN:      ${{ inputs.github-token }}
+        PRGUARD_ACTION_PATH:       ${{ github.action_path }}
+      run: python "${{ github.action_path }}/src/main.py"

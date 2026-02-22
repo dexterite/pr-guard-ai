@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PR Guard AI Configuration",
+  "description": "Schema for pr-guard.config.yml user configuration files",
+  "type": "object",
+  "properties": {
+    "checks": {
+      "type": "object",
+      "description": "Per-check configuration overrides",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Enable or disable this check",
+            "default": true
+          },
+          "extra_instructions": {
+            "type": "string",
+            "description": "Additional instructions appended to the AI prompt"
+          },
+          "file_patterns": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Override file glob patterns for this check"
+          },
+          "exclude_patterns": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Additional glob patterns to exclude (merged with defaults)"
+          },
+          "severity_threshold": {
+            "type": "string",
+            "enum": ["info", "low", "medium", "high", "critical"],
+            "description": "Per-check severity threshold override"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "custom_checks_dir": {
+      "type": "string",
+      "description": "Path to directory containing custom check definitions"
+    },
+    "exclude_patterns": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Global exclude patterns merged with built-in defaults"
+    }
+  },
+  "additionalProperties": false
+}
