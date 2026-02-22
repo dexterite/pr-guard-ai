@@ -31,7 +31,10 @@ def main():
     print(f"\n  Model         : {config['model']}")
     print(f"  API base      : {_mask_url(config['api_base_url'])}")
     print(f"  Checks        : {', '.join(config['enabled_checks'])}")
-    print(f"  Diff only     : {config['diff_only']}")
+    if config.get("full_scan"):
+        print(f"  Scan mode     : FULL SCAN (all tracked files)")
+    else:
+        print(f"  Diff only     : {config['diff_only']}")
     print(f"  Threshold     : {config['severity_threshold']}")
     print(f"  Output format : {config['output_format']}")
     print(f"  Ship to       : {config['ship_to']}")

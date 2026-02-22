@@ -44,6 +44,11 @@ inputs:
     default: ""
     required: false
 
+  full-scan:
+    description: "Scan ALL tracked files regardless of git diff (overrides diff-only)"
+    default: "false"
+    required: false
+
   diff-only:
     description: "Analyze only files changed in the PR / push (true/false)"
     default: "true"
@@ -145,6 +150,7 @@ runs:
         PRGUARD_CHECKS:            ${{ inputs.checks }}
         PRGUARD_CONFIG_FILE:       ${{ inputs.config-file }}
         PRGUARD_CUSTOM_CHECKS_DIR: ${{ inputs.custom-checks-dir }}
+        PRGUARD_FULL_SCAN:         ${{ inputs.full-scan }}
         PRGUARD_DIFF_ONLY:         ${{ inputs.diff-only }}
         PRGUARD_SEVERITY_THRESHOLD: ${{ inputs.severity-threshold }}
         PRGUARD_OUTPUT_FORMAT:     ${{ inputs.output-format }}

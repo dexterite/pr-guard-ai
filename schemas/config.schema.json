@@ -38,6 +38,11 @@
         "additionalProperties": true
       }
     },
+    "full_scan": {
+      "type": "boolean",
+      "description": "Scan all tracked files regardless of git diff (overrides diff_only)",
+      "default": false
+    },
     "custom_checks_dir": {
       "type": "string",
       "description": "Path to directory containing custom check definitions"

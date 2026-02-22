@@ -51,3 +51,7 @@ checks:
 # exclude_patterns:
 #   - "**/vendor/**"
 #   - "**/third_party/**"
+
+# Full scan mode — analyse ALL tracked files, not just the git diff.
+# Overrides the diff-only action input when set to true.
+# full_scan: true

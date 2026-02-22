@@ -13,6 +13,7 @@ DEFAULTS = {
     "api_base_url": "https://api.openai.com/v1",
     "model": "gpt-4o",
     "checks": "all",
+    "full_scan": False,
     "diff_only": True,
     "severity_threshold": "low",
     "output_format": "markdown",
@@ -65,6 +66,7 @@ def load_config():
         "PRGUARD_API_BASE_URL": ("api_base_url", "str"),
         "PRGUARD_MODEL": ("model", "str"),
         "PRGUARD_CHECKS": ("checks", "str"),
+        "PRGUARD_FULL_SCAN": ("full_scan", "bool"),
         "PRGUARD_DIFF_ONLY": ("diff_only", "bool"),
         "PRGUARD_SEVERITY_THRESHOLD": ("severity_threshold", "str"),
         "PRGUARD_OUTPUT_FORMAT": ("output_format", "str"),
@@ -95,6 +97,10 @@ def load_config():
             config[key] = [p.strip() for p in raw.split(",") if p.strip()]
         else:
             config[key] = raw
+
+    # --- full-scan overrides diff-only ------------------------------------
+    if config["full_scan"]:
+        config["diff_only"] = False
 
     # --- User config file ------------------------------------------------
     config["user_overrides"] = _load_user_config(config)
