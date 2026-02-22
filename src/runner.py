@@ -1,5 +1,7 @@
 """Check runner — orchestrates AI analysis for each enabled check."""
 
+import time
+
 from ai_client import AIClient
 from file_collector import collect_files, read_file_content
 
@@ -27,9 +29,13 @@ class CheckRunner:
         """Execute all enabled checks. Returns a list of result dicts."""
         results: list[dict] = []
         total = len(self.config["check_definitions"])
+        self._run_start = time.monotonic()
+        self._batches_done = 0
+        self._batches_total = 0  # will be updated per check
 
         for i, (check_name, check_def) in enumerate(self.config["check_definitions"].items(), 1):
-            print(f"\n::group::Check {i}/{total}: {check_name}")
+            elapsed = time.monotonic() - self._run_start
+            print(f"\n::group::Check {i}/{total}: {check_name}  [{self._fmt_time(elapsed)} elapsed]")
             result = self._run_check(check_name, check_def)
             results.append(result)
             print(f"::endgroup::")
@@ -75,7 +81,22 @@ class CheckRunner:
 
         for idx, batch in enumerate(batches, start=1):
             file_count = len(batch)
-            print(f"  Batch {idx}/{len(batches)} ({file_count} file(s)) — sending to AI...")
+            self._batches_done += 1
+            elapsed = time.monotonic() - self._run_start
+
+            # ETA based on average time per batch so far
+            if self._batches_done > 1:
+                avg = elapsed / (self._batches_done - 1)
+                remaining_batches = len(batches) - idx  # remaining in this check only
+                eta = avg * remaining_batches
+                eta_str = f"~{self._fmt_time(eta)} remaining"
+            else:
+                eta_str = "estimating..."
+
+            print(f"  Batch {idx}/{len(batches)} ({file_count} file(s)) "
+                  f"[{self._fmt_time(elapsed)} elapsed, {eta_str}] — sending to AI...")
+
+            batch_start = time.monotonic()
 
             user_msg = self._build_user_message(batch)
 
@@ -89,7 +110,8 @@ class CheckRunner:
                     f.setdefault("check", name)
 
                 all_findings.extend(findings)
-                print(f"    → {len(findings)} finding(s)")
+                batch_time = time.monotonic() - batch_start
+                print(f"    → {len(findings)} finding(s) ({batch_time:.1f}s)")
                 if summary:
                     print(f"    AI summary: {summary[:200]}")
 
@@ -161,10 +183,20 @@ class CheckRunner:
     def _log_throttle_stats(self):
         """Print throttle statistics if any throttling occurred."""
         stats = self.client.stats
+        total_time = time.monotonic() - self._run_start
+        print(f"\n  AI calls      : {stats['total_calls']} calls in {self._fmt_time(total_time)}")
         if stats["total_throttle_s"] > 0 or stats["effective_delay_ms"] > 0:
-            print(f"\n  Throttle stats: {stats['total_calls']} API calls, "
-                  f"{stats['total_throttle_s']}s throttled, "
+            print(f"  Throttle      : {stats['total_throttle_s']}s throttled, "
                   f"effective delay {stats['effective_delay_ms']}ms")
+
+    @staticmethod
+    def _fmt_time(seconds: float) -> str:
+        """Format seconds as a compact human-readable string."""
+        if seconds < 60:
+            return f"{seconds:.0f}s"
+        minutes = int(seconds // 60)
+        secs = int(seconds % 60)
+        return f"{minutes}m{secs:02d}s"
 
     # ------------------------------------------------------------------
     # Batching
@@ -178,8 +210,13 @@ class CheckRunner:
         batches: list[list[tuple[str, str]]] = []
         current_batch: list[tuple[str, str]] = []
         current_tokens = 0
+        total = len(files)
 
-        for filepath in files:
+        for i, filepath in enumerate(files, 1):
+            # Progress every 10 files or on last file
+            if i % 10 == 0 or i == total:
+                print(f"    Reading files: {i}/{total} ({len(batches)} batch(es) so far)", end="\r")
+
             content, _ = read_file_content(filepath)
             tokens = len(content) / _CHARS_PER_TOKEN
 
@@ -195,6 +232,7 @@ class CheckRunner:
         if current_batch:
             batches.append(current_batch)
 
+        print(f"    Reading files: {total}/{total} — {len(batches)} batch(es) ready        ")
         return batches
 
     # ------------------------------------------------------------------
