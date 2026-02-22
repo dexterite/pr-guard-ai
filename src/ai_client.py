@@ -54,6 +54,72 @@ class AIClient:
         raw = self._chat_completion(messages)
         return self._parse_json(raw)
 
+    def preflight(self) -> dict:
+        """Quick smoke-test: verify API key, endpoint, and model availability.
+
+        Returns a dict with 'ok' (bool), 'model' (str), and 'error' (str|None).
+        """
+        url = f"{self.base_url}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": "Say OK"}],
+            "max_tokens": 5,
+            "temperature": 0,
+        }
+
+        try:
+            resp = requests.post(url, headers=headers, json=payload, timeout=30)
+
+            if resp.status_code == 200:
+                return {"ok": True, "model": self.model, "error": None}
+
+            snippet = resp.text[:300]
+            if resp.status_code in (401, 403):
+                return {
+                    "ok": False,
+                    "model": self.model,
+                    "error": f"Authentication failed (HTTP {resp.status_code}). "
+                             f"Check your API key and permissions. Detail: {snippet}",
+                }
+            if resp.status_code == 404:
+                return {
+                    "ok": False,
+                    "model": self.model,
+                    "error": f"Model '{self.model}' not found (HTTP 404). "
+                             f"Verify the model name and that your API plan has access. Detail: {snippet}",
+                }
+            if resp.status_code == 429:
+                # Rate-limited even on preflight — API works but heavily throttled
+                return {
+                    "ok": True,
+                    "model": self.model,
+                    "error": "Warning: rate-limited (429) on preflight. "
+                             "Expect slow execution. Consider increasing request-delay-ms.",
+                }
+            return {
+                "ok": False,
+                "model": self.model,
+                "error": f"Unexpected HTTP {resp.status_code}: {snippet}",
+            }
+
+        except requests.exceptions.Timeout:
+            return {
+                "ok": False,
+                "model": self.model,
+                "error": f"Connection timed out after 30s. "
+                         f"Check api-base-url: {self.base_url}",
+            }
+        except requests.exceptions.ConnectionError as exc:
+            return {
+                "ok": False,
+                "model": self.model,
+                "error": f"Cannot connect to {self.base_url} — {str(exc)[:200]}",
+            }
+
     @property
     def effective_delay_ms(self) -> int:
         """Current per-call delay (base + adaptive) in milliseconds."""

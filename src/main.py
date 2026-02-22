@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config_loader import load_config
 from runner import CheckRunner
+from ai_client import AIClient
 from output_formatter import format_report, sanitize_output
 from shipper import ship_results
 
@@ -55,25 +56,48 @@ def main():
         return
 
     # ------------------------------------------------------------------
-    # 2. Run checks
+    # 2. Preflight — verify API key, model, and endpoint
+    # ------------------------------------------------------------------
+    print(f"\n[2/6] Preflight check (verifying API key, model, endpoint)...")
+    client = AIClient(
+        api_key=config["api_key"],
+        base_url=config["api_base_url"],
+        model=config["model"],
+        temperature=config.get("temperature", 0.1),
+        timeout=config.get("api_timeout", 300),
+    )
+    pf = client.preflight()
+    if pf["ok"]:
+        if pf["error"]:  # ok but with warning (e.g. 429)
+            print(f"  ::warning::{pf['error']}")
+        else:
+            print(f"  OK — model '{pf['model']}' is reachable")
+    else:
+        print(f"  ::error::Preflight FAILED: {pf['error']}")
+        print(f"\n  Aborting — fix the issue above and re-run.")
+        _set_outputs(0, 0, "", 1)
+        return
+
+    # ------------------------------------------------------------------
+    # 3. Run checks
     # ------------------------------------------------------------------
     checks = config['enabled_checks']
-    print(f"\n[2/5] Running {len(checks)} check(s): {', '.join(checks)}...")
+    print(f"\n[3/6] Running {len(checks)} check(s): {', '.join(checks)}...")
     runner = CheckRunner(config)
     results = runner.run()
 
     # ------------------------------------------------------------------
-    # 3. Format & sanitize
+    # 4. Format & sanitize
     # ------------------------------------------------------------------
-    print(f"\n[3/5] Formatting report ({config['output_format']})...")
+    print(f"\n[4/6] Formatting report ({config['output_format']})...")
     report = format_report(results, config)
-    print("[4/5] Sanitizing output...")
+    print("[5/6] Sanitizing output...")
     safe_report = sanitize_output(report, config)
 
     # ------------------------------------------------------------------
-    # 4. Ship results
+    # 5. Ship results
     # ------------------------------------------------------------------
-    print(f"[5/5] Shipping results to {config['ship_to']}...")
+    print(f"[6/6] Shipping results to {config['ship_to']}...")
     report_path = ship_results(safe_report, results, config)
 
     # ------------------------------------------------------------------
