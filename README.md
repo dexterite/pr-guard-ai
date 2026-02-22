@@ -59,6 +59,7 @@ That's it. All 5 checks run on changed files and the report appears in the Actio
 | `checks` | no | `all` | Comma-separated: `code-quality,sast,secret-detection,iac-security,container-security` |
 | `config-file` | no | — | Path to `pr-guard.config.yml` |
 | `custom-checks-dir` | no | — | Directory with custom check folders |
+| `full-scan` | no | `false` | Scan **all** tracked files regardless of git diff (overrides `diff-only`) |
 | `diff-only` | no | `true` | Only analyze changed files |
 | `severity-threshold` | no | `high` | Exit non-zero if findings >= this level (`info\|low\|medium\|high\|critical`) |
 | `output-format` | no | `markdown` | `markdown`, `json`, or `sarif` |
@@ -69,6 +70,7 @@ That's it. All 5 checks run on changed files and the report appears in the Actio
 | `max-context-tokens` | no | `100000` | Token budget per AI call |
 | `exclude-patterns` | no | — | Comma-separated globs to exclude |
 | `github-token` | no | — | For PR comments (`secrets.GITHUB_TOKEN`) |
+| `debug` | no | `false` | Verbose logging (git commands, file filtering, AI responses) |
 
 ## Outputs
 
