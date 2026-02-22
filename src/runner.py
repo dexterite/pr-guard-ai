@@ -26,9 +26,10 @@ class CheckRunner:
     def run(self) -> list[dict]:
         """Execute all enabled checks. Returns a list of result dicts."""
         results: list[dict] = []
+        total = len(self.config["check_definitions"])
 
-        for check_name, check_def in self.config["check_definitions"].items():
-            print(f"\n::group::Check: {check_name}")
+        for i, (check_name, check_def) in enumerate(self.config["check_definitions"].items(), 1):
+            print(f"\n::group::Check {i}/{total}: {check_name}")
             result = self._run_check(check_name, check_def)
             results.append(result)
             print(f"::endgroup::")
@@ -47,6 +48,7 @@ class CheckRunner:
         debug = self.config.get("debug", False)
 
         # Collect matching files
+        print(f"  Collecting files...")
         files = collect_files(check_config, self.config)
         print(f"  Matched files : {len(files)}")
 
@@ -65,6 +67,7 @@ class CheckRunner:
                 print(f"    [debug]   ... and {len(files) - 10} more")
 
         # Split into token-limited batches
+        print(f"  Building batches (token budget: {self.config.get('max_context_tokens', 100_000):,})...")
         batches = self._build_batches(files)
         print(f"  Batches       : {len(batches)}")
 
@@ -72,7 +75,7 @@ class CheckRunner:
 
         for idx, batch in enumerate(batches, start=1):
             file_count = len(batch)
-            print(f"  Batch {idx}/{len(batches)} ({file_count} file(s)) …")
+            print(f"  Batch {idx}/{len(batches)} ({file_count} file(s)) — sending to AI...")
 
             user_msg = self._build_user_message(batch)
 
@@ -91,16 +94,46 @@ class CheckRunner:
                     print(f"    AI summary: {summary[:200]}")
 
             except Exception as exc:
-                print(f"::warning::Batch {idx} of '{name}' failed: {exc}")
+                error_msg = str(exc)
+                print(f"::warning::Batch {idx} of '{name}' failed: {error_msg}")
+
+                # Build a user-friendly description
+                if "429" in error_msg or "rate-limit" in error_msg.lower():
+                    friendly = (
+                        f"Batch {idx} was rate-limited by the AI provider after multiple retries. "
+                        f"Try increasing 'request-delay-ms' (e.g. 500–1000) or reducing the number "
+                        f"of files with 'exclude-patterns' / 'max-file-size-kb'."
+                    )
+                elif "timeout" in error_msg.lower():
+                    friendly = (
+                        f"Batch {idx} timed out waiting for an AI response. "
+                        f"The batch may contain too many files — try lowering 'max-context-tokens' "
+                        f"to create smaller batches, or check your API endpoint availability."
+                    )
+                elif "connection" in error_msg.lower():
+                    friendly = (
+                        f"Batch {idx} could not connect to the AI API. "
+                        f"Verify 'api-base-url' is correct and the endpoint is reachable."
+                    )
+                else:
+                    friendly = f"Batch {idx} failed: {error_msg[:300]}"
+
+                batch_files = [fp for fp, _ in batch]
+                file_list = ", ".join(batch_files[:5])
+                if len(batch_files) > 5:
+                    file_list += f" (+{len(batch_files) - 5} more)"
+
                 all_findings.append(
                     {
                         "check": name,
-                        "severity": "info",
-                        "title": "Analysis Error",
-                        "description": f"AI analysis failed for batch {idx}: {str(exc)[:300]}",
-                        "file": "",
+                        "severity": "medium",
+                        "title": f"AI Analysis Failed — Batch {idx}/{len(batches)}",
+                        "description": f"{friendly}\n\nAffected files: {file_list}",
+                        "file": batch_files[0] if batch_files else "",
                         "line": 0,
-                        "category": "error",
+                        "category": "analysis-error",
+                        "suggestion": "Re-run with 'debug: true' for full diagnostics. "
+                                       "If rate-limited, add 'request-delay-ms: 1000'.",
                     }
                 )
 

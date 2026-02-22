@@ -133,6 +133,7 @@ class AIClient:
 
                 # Rate-limited
                 if resp.status_code == 429:
+                    last_error = "rate-limited (429) — your API plan's rate limit was exceeded"
                     retry_after = float(resp.headers.get("Retry-After", 2 ** attempt))
                     self._ramp_adaptive_delay(retry_after)
                     wait = max(retry_after, self._base_delay_s + self._adaptive_delay_s)
@@ -143,7 +144,7 @@ class AIClient:
 
                 # Transient server error
                 if resp.status_code >= 500:
-                    last_error = f"HTTP {resp.status_code}"
+                    last_error = f"server error (HTTP {resp.status_code})"
                     wait = 2 ** attempt
                     print(f"    Server error ({resp.status_code}). Retry {attempt} in {wait}s…")
                     time.sleep(wait)
@@ -152,23 +153,23 @@ class AIClient:
                 # Client error — don't retry
                 snippet = resp.text[:500]
                 raise RuntimeError(
-                    f"AI API client error {resp.status_code}: {snippet}"
+                    f"AI API returned HTTP {resp.status_code}: {snippet}"
                 )
 
             except requests.exceptions.Timeout:
-                last_error = "timeout"
+                last_error = f"request timed out after {self.timeout}s"
                 wait = 2 ** attempt
                 print(f"    Timeout on attempt {attempt}. Retrying in {wait}s…")
                 time.sleep(wait)
 
             except requests.exceptions.ConnectionError as exc:
-                last_error = str(exc)[:200]
+                last_error = f"connection error — {str(exc)[:150]}"
                 wait = 2 ** attempt
                 print(f"    Connection error on attempt {attempt}. Retrying in {wait}s…")
                 time.sleep(wait)
 
         raise RuntimeError(
-            f"AI API failed after {self.max_retries} attempts: {last_error}"
+            f"AI API failed after {self.max_retries} attempts — last error: {last_error}"
         )
 
     @staticmethod

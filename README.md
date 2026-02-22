@@ -334,10 +334,21 @@ Works with any OpenAI Chat Completions–compatible API:
 |----------|----------------|-------|
 | OpenAI | `https://api.openai.com/v1` | Default |
 | Azure OpenAI | `https://<resource>.openai.azure.com/openai/deployments/<deployment>` | Set model to deployment name |
+| GitHub Models | `https://models.inference.ai.azure.com/v1` | Use `GITHUB_TOKEN` or PAT as the API key — no extra keys needed |
 | Ollama | `http://localhost:11434/v1` | Local models |
 | vLLM | `http://localhost:8000/v1` | Self-hosted |
 | LiteLLM | `http://localhost:4000/v1` | Proxy for 100+ providers |
 | Anthropic (via proxy) | Depends on proxy | Use an OpenAI-compatible wrapper |
+
+> **Tip — GitHub Models:** If your organization has [GitHub Models](https://github.com/marketplace/models) enabled, you can run PR Guard AI with zero extra API keys:
+>
+> ```yaml
+> - uses: dexterite/pr-guard-ai@main
+>   with:
+>     api-key: ${{ secrets.GITHUB_TOKEN }}
+>     api-base-url: "https://models.inference.ai.azure.com/v1"
+>     model: "gpt-4o"
+> ```
 
 ## Security Considerations
 

@@ -26,6 +26,7 @@ def main():
     # ------------------------------------------------------------------
     # 1. Configuration
     # ------------------------------------------------------------------
+    print("\n[1/5] Loading configuration...")
     config = load_config()
 
     print(f"\n  Model         : {config['model']}")
@@ -54,18 +55,23 @@ def main():
     # ------------------------------------------------------------------
     # 2. Run checks
     # ------------------------------------------------------------------
+    checks = config['enabled_checks']
+    print(f"\n[2/5] Running {len(checks)} check(s): {', '.join(checks)}...")
     runner = CheckRunner(config)
     results = runner.run()
 
     # ------------------------------------------------------------------
     # 3. Format & sanitize
     # ------------------------------------------------------------------
+    print(f"\n[3/5] Formatting report ({config['output_format']})...")
     report = format_report(results, config)
+    print("[4/5] Sanitizing output...")
     safe_report = sanitize_output(report, config)
 
     # ------------------------------------------------------------------
     # 4. Ship results
     # ------------------------------------------------------------------
+    print(f"[5/5] Shipping results to {config['ship_to']}...")
     report_path = ship_results(safe_report, results, config)
 
     # ------------------------------------------------------------------
