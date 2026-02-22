@@ -98,7 +98,21 @@ class CheckRunner:
                 print(f"::warning::Batch {idx} of '{name}' failed: {error_msg}")
 
                 # Build a user-friendly description
-                if "429" in error_msg or "rate-limit" in error_msg.lower():
+                if "401" in error_msg or "403" in error_msg or "authentication" in error_msg.lower() or "unauthorized" in error_msg.lower():
+                    friendly = (
+                        f"Authentication failed when calling the AI API. "
+                        f"Your API key is either invalid or missing required permissions. "
+                        f"For GitHub Models, the built-in GITHUB_TOKEN does NOT work — "
+                        f"generate a Personal Access Token (PAT) and store it as a repository secret."
+                    )
+                elif "413" in error_msg or "too large" in error_msg.lower() or "tokens_limit" in error_msg.lower():
+                    friendly = (
+                        f"Batch {idx} exceeds the model's maximum token limit. "
+                        f"Set 'max-context-tokens' to a value within your model's limit "
+                        f"(e.g. 8000 for GitHub Models gpt-4o, 128000 for OpenAI gpt-4o). "
+                        f"This will split files into smaller batches that fit."
+                    )
+                elif "429" in error_msg or "rate-limit" in error_msg.lower():
                     friendly = (
                         f"Batch {idx} was rate-limited by the AI provider after multiple retries. "
                         f"Try increasing 'request-delay-ms' (e.g. 500–1000) or reducing the number "

@@ -152,6 +152,19 @@ class AIClient:
 
                 # Client error — don't retry
                 snippet = resp.text[:500]
+                if resp.status_code in (401, 403):
+                    raise RuntimeError(
+                        f"Authentication failed (HTTP {resp.status_code}). "
+                        f"Check that your API key is valid and has the required permissions. "
+                        f"Detail: {snippet}"
+                    )
+                if resp.status_code == 413:
+                    raise RuntimeError(
+                        f"Request too large (HTTP 413). The batch exceeds the model's token limit. "
+                        f"Lower 'max-context-tokens' to create smaller batches "
+                        f"(GitHub Models gpt-4o limit is ~8 000 tokens). "
+                        f"Detail: {snippet}"
+                    )
                 raise RuntimeError(
                     f"AI API returned HTTP {resp.status_code}: {snippet}"
                 )
