@@ -77,20 +77,37 @@ class AIClient:
             if resp.status_code == 200:
                 return {"ok": True, "model": self.model, "error": None}
 
-            snippet = resp.text[:300]
+            # Try to extract structured error from JSON body
+            detail = ""
+            error_code = ""
+            try:
+                body = resp.json()
+                err = body.get("error", {})
+                detail = err.get("message", resp.text[:300])
+                error_code = err.get("code", "")
+            except Exception:
+                detail = resp.text[:300]
+
+            # Model not accessible — can be 400, 403, or 404 with various error codes
+            if (resp.status_code == 404
+                    or error_code == "model_not_found"
+                    or "does not have access to model" in detail.lower()
+                    or "model_not_found" in detail.lower()):
+                return {
+                    "ok": False,
+                    "model": self.model,
+                    "error": f"Model '{self.model}' is not available for your API key (HTTP {resp.status_code}). "
+                             f"{detail}\n"
+                             f"  → Verify the model is enabled in your OpenAI project settings.\n"
+                             f"  → Ensure the API key in GitHub secrets belongs to the correct project.\n"
+                             f"  → Try the dated name: gpt-4.1-mini-2025-04-14",
+                }
             if resp.status_code in (401, 403):
                 return {
                     "ok": False,
                     "model": self.model,
                     "error": f"Authentication failed (HTTP {resp.status_code}). "
-                             f"Check your API key and permissions. Detail: {snippet}",
-                }
-            if resp.status_code == 404:
-                return {
-                    "ok": False,
-                    "model": self.model,
-                    "error": f"Model '{self.model}' not found (HTTP 404). "
-                             f"Verify the model name and that your API plan has access. Detail: {snippet}",
+                             f"Check your API key and permissions. Detail: {detail}",
                 }
             if resp.status_code == 429:
                 # Rate-limited even on preflight — API works but heavily throttled
@@ -103,7 +120,7 @@ class AIClient:
             return {
                 "ok": False,
                 "model": self.model,
-                "error": f"Unexpected HTTP {resp.status_code}: {snippet}",
+                "error": f"Unexpected HTTP {resp.status_code}: {detail}",
             }
 
         except requests.exceptions.Timeout:
