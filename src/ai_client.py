@@ -11,6 +11,10 @@ class AIClient:
 
     Works with any OpenAI-compatible endpoint (OpenAI, Azure OpenAI,
     Ollama, vLLM, LiteLLM, etc.).
+
+    Includes:
+    - Configurable base delay between calls (``request_delay_ms``)
+    - Adaptive throttle: on 429 the delay auto-ramps and decays over time
     """
 
     def __init__(
@@ -18,14 +22,22 @@ class AIClient:
         api_key: str,
         base_url: str = "https://api.openai.com/v1",
         model: str = "gpt-4o",
-        max_retries: int = 3,
+        max_retries: int = 5,
         timeout: int = 180,
+        request_delay_ms: int = 0,
     ):
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.max_retries = max_retries
         self.timeout = timeout
+
+        # --- Throttle state -----------------------------------------------
+        self._base_delay_s = request_delay_ms / 1000.0  # user-configured floor
+        self._adaptive_delay_s = 0.0  # extra delay added on 429
+        self._last_call_time = 0.0
+        self._total_calls = 0
+        self._total_throttle_s = 0.0
 
     # ------------------------------------------------------------------
     # Public
@@ -40,12 +52,51 @@ class AIClient:
         raw = self._chat_completion(messages)
         return self._parse_json(raw)
 
+    @property
+    def effective_delay_ms(self) -> int:
+        """Current per-call delay (base + adaptive) in milliseconds."""
+        return int((self._base_delay_s + self._adaptive_delay_s) * 1000)
+
+    @property
+    def stats(self) -> dict:
+        """Return call statistics for logging."""
+        return {
+            "total_calls": self._total_calls,
+            "total_throttle_s": round(self._total_throttle_s, 1),
+            "effective_delay_ms": self.effective_delay_ms,
+        }
+
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
 
+    def _throttle(self):
+        """Sleep enough to respect the configured + adaptive delay."""
+        delay = self._base_delay_s + self._adaptive_delay_s
+        if delay <= 0:
+            return
+        elapsed = time.monotonic() - self._last_call_time
+        remaining = delay - elapsed
+        if remaining > 0:
+            self._total_throttle_s += remaining
+            time.sleep(remaining)
+
+    def _decay_adaptive_delay(self):
+        """Slowly reduce the adaptive penalty after a successful call."""
+        if self._adaptive_delay_s > 0:
+            self._adaptive_delay_s = max(0.0, self._adaptive_delay_s * 0.75 - 0.1)
+
+    def _ramp_adaptive_delay(self, retry_after: float):
+        """Increase adaptive delay after a 429."""
+        # At least the Retry-After value, but keep growing if repeated
+        self._adaptive_delay_s = max(
+            self._adaptive_delay_s * 1.5 + 1.0,
+            retry_after,
+        )
+        print(f"    Adaptive delay ramped to {self.effective_delay_ms}ms")
+
     def _chat_completion(self, messages: list[dict]) -> str:
-        """Call the chat/completions endpoint with retry & back-off."""
+        """Call the chat/completions endpoint with retry, back-off & throttle."""
         url = f"{self.base_url}/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -60,8 +111,14 @@ class AIClient:
 
         last_error: str | None = None
 
+        # Respect throttle before first attempt
+        self._throttle()
+
         for attempt in range(1, self.max_retries + 1):
             try:
+                self._last_call_time = time.monotonic()
+                self._total_calls += 1
+
                 resp = requests.post(
                     url,
                     headers=headers,
@@ -70,21 +127,26 @@ class AIClient:
                 )
 
                 if resp.status_code == 200:
+                    self._decay_adaptive_delay()
                     data = resp.json()
                     return data["choices"][0]["message"]["content"]
 
                 # Rate-limited
                 if resp.status_code == 429:
-                    wait = int(resp.headers.get("Retry-After", 2 ** attempt))
-                    print(f"    Rate-limited (429). Waiting {wait}s …")
+                    retry_after = float(resp.headers.get("Retry-After", 2 ** attempt))
+                    self._ramp_adaptive_delay(retry_after)
+                    wait = max(retry_after, self._base_delay_s + self._adaptive_delay_s)
+                    print(f"    Rate-limited (429). Waiting {wait:.1f}s … (attempt {attempt}/{self.max_retries})")
+                    self._total_throttle_s += wait
                     time.sleep(wait)
                     continue
 
                 # Transient server error
                 if resp.status_code >= 500:
                     last_error = f"HTTP {resp.status_code}"
-                    print(f"    Server error ({resp.status_code}). Retry {attempt}…")
-                    time.sleep(2 ** attempt)
+                    wait = 2 ** attempt
+                    print(f"    Server error ({resp.status_code}). Retry {attempt} in {wait}s…")
+                    time.sleep(wait)
                     continue
 
                 # Client error — don't retry
@@ -95,13 +157,15 @@ class AIClient:
 
             except requests.exceptions.Timeout:
                 last_error = "timeout"
-                print(f"    Timeout on attempt {attempt}. Retrying…")
-                time.sleep(2 ** attempt)
+                wait = 2 ** attempt
+                print(f"    Timeout on attempt {attempt}. Retrying in {wait}s…")
+                time.sleep(wait)
 
             except requests.exceptions.ConnectionError as exc:
                 last_error = str(exc)[:200]
-                print(f"    Connection error on attempt {attempt}. Retrying…")
-                time.sleep(2 ** attempt)
+                wait = 2 ** attempt
+                print(f"    Connection error on attempt {attempt}. Retrying in {wait}s…")
+                time.sleep(wait)
 
         raise RuntimeError(
             f"AI API failed after {self.max_retries} attempts: {last_error}"

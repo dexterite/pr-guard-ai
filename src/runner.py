@@ -16,6 +16,7 @@ class CheckRunner:
             api_key=config["api_key"],
             base_url=config["api_base_url"],
             model=config["model"],
+            request_delay_ms=config.get("request_delay_ms", 0),
         )
 
     # ------------------------------------------------------------------
@@ -32,6 +33,7 @@ class CheckRunner:
             results.append(result)
             print(f"::endgroup::")
 
+        self._log_throttle_stats()
         return results
 
     # ------------------------------------------------------------------
@@ -108,6 +110,14 @@ class CheckRunner:
             "findings": all_findings,
             "summary": f"Analyzed {len(files)} file(s), found {len(all_findings)} issue(s).",
         }
+
+    def _log_throttle_stats(self):
+        """Print throttle statistics if any throttling occurred."""
+        stats = self.client.stats
+        if stats["total_throttle_s"] > 0 or stats["effective_delay_ms"] > 0:
+            print(f"\n  Throttle stats: {stats['total_calls']} API calls, "
+                  f"{stats['total_throttle_s']}s throttled, "
+                  f"effective delay {stats['effective_delay_ms']}ms")
 
     # ------------------------------------------------------------------
     # Batching

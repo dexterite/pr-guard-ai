@@ -39,6 +39,11 @@ def main():
     print(f"  Output format : {config['output_format']}")
     print(f"  Ship to       : {config['ship_to']}")
     print(f"  Max file KB   : {config['max_file_size_kb']}")
+    delay = config.get('request_delay_ms', 0)
+    if delay:
+        print(f"  Request delay : {delay}ms (+ adaptive on 429)")
+    else:
+        print(f"  Request delay : adaptive only (ramps on 429)")
     print(f"  Debug         : {config.get('debug', False)}")
 
     if not config["enabled_checks"]:

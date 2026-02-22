@@ -70,6 +70,7 @@ That's it. All 5 checks run on changed files and the report appears in the Actio
 | `max-context-tokens` | no | `100000` | Token budget per AI call |
 | `exclude-patterns` | no | — | Comma-separated globs to exclude |
 | `github-token` | no | — | For PR comments (`secrets.GITHUB_TOKEN`) |
+| `request-delay-ms` | no | `0` | Minimum delay (ms) between API calls; also auto-ramps on 429 |
 | `debug` | no | `false` | Verbose logging (git commands, file filtering, AI responses) |
 
 ## Outputs
@@ -232,6 +233,37 @@ Then upload to GitHub Code Scanning:
 - uses: github/codeql-action/upload-sarif@v3
   with:
     sarif_file: pr-guard-report.sarif.json
+```
+
+## Rate-Limit Handling & Throttling
+
+Full-scan mode (or large PRs) can produce many API calls. PR Guard AI has a two-layer throttle to avoid 429 errors:
+
+### 1. Base delay (`request-delay-ms`)
+
+A fixed minimum pause between every API call. Set it to match your provider's rate limit:
+
+```yaml
+request-delay-ms: "500"   # 500 ms between calls → ~2 requests/sec
+```
+
+### 2. Adaptive auto-ramp (always on)
+
+Even with `request-delay-ms: "0"`, the client reacts to 429 responses automatically:
+
+- Reads the `Retry-After` header from the provider
+- Ramps the internal delay up (`×1.5 + 1 s`, floored by `Retry-After`)
+- On each successful call, decays the extra delay back down (`×0.75 − 0.1 s`)
+- Up to 5 retries per request before failing
+
+The two layers stack: `effective delay = base delay + adaptive penalty`.
+
+**Recommended for full scans:** set `request-delay-ms` to a conservative value (e.g. `500`–`1000`) so the adaptive layer rarely needs to kick in. For diff-only runs on small PRs you can leave it at `0`.
+
+After all checks complete, throttle stats are printed:
+
+```
+  Throttle stats: 23 API calls, 4.2s throttled, effective delay 500ms
 ```
 
 ## Architecture

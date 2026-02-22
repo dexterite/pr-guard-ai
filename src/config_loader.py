@@ -26,6 +26,7 @@ DEFAULTS = {
     "custom_checks_dir": "",
     "github_token": "",
     "config_file": "",
+    "request_delay_ms": 0,
     "debug": False,
 }
 
@@ -79,6 +80,7 @@ def load_config():
         "PRGUARD_CUSTOM_CHECKS_DIR": ("custom_checks_dir", "str"),
         "PRGUARD_GITHUB_TOKEN": ("github_token", "str"),
         "PRGUARD_CONFIG_FILE": ("config_file", "str"),
+        "PRGUARD_REQUEST_DELAY_MS": ("request_delay_ms", "int"),
         "PRGUARD_DEBUG": ("debug", "bool"),
     }
 
