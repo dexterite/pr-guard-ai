@@ -95,6 +95,11 @@ inputs:
     default: ""
     required: false
 
+  debug:
+    description: "Enable verbose debug logging (git commands, file filtering, AI responses)"
+    default: "false"
+    required: false
+
 # -----------------------------------------------------------------------
 # Outputs — consumed by downstream steps / jobs
 # -----------------------------------------------------------------------
@@ -150,5 +155,6 @@ runs:
         PRGUARD_MAX_CONTEXT_TOKENS: ${{ inputs.max-context-tokens }}
         PRGUARD_EXCLUDE_PATTERNS:  ${{ inputs.exclude-patterns }}
         PRGUARD_GITHUB_TOKEN:      ${{ inputs.github-token }}
+        PRGUARD_DEBUG:             ${{ inputs.debug }}
         PRGUARD_ACTION_PATH:       ${{ github.action_path }}
       run: python "${{ github.action_path }}/src/main.py"

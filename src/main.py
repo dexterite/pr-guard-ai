@@ -35,6 +35,8 @@ def main():
     print(f"  Threshold     : {config['severity_threshold']}")
     print(f"  Output format : {config['output_format']}")
     print(f"  Ship to       : {config['ship_to']}")
+    print(f"  Max file KB   : {config['max_file_size_kb']}")
+    print(f"  Debug         : {config.get('debug', False)}")
 
     if not config["enabled_checks"]:
         print("\n::warning::No checks enabled. Nothing to do.")
@@ -64,6 +66,13 @@ def main():
     elapsed = time.time() - start_time
     total_findings = sum(len(r["findings"]) for r in results)
     files_analyzed = sum(r["files_analyzed"] for r in results)
+
+    # Per-check breakdown
+    print("\n  Per-check results:")
+    for r in results:
+        fc = r["files_analyzed"]
+        fn = len(r["findings"])
+        print(f"    {r['check']:>20} : {fc} file(s), {fn} finding(s)")
 
     by_severity = {}
     for r in results:

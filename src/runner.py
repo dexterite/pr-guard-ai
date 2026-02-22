@@ -42,6 +42,7 @@ class CheckRunner:
         """Run a single check against matching files."""
         check_config = check_def.get("config", {})
         prompt = check_def["prompt"]
+        debug = self.config.get("debug", False)
 
         # Collect matching files
         files = collect_files(check_config, self.config)
@@ -54,6 +55,12 @@ class CheckRunner:
                 "findings": [],
                 "summary": "No matching files found.",
             }
+
+        if debug:
+            for f in files[:10]:
+                print(f"    [debug]   {f}")
+            if len(files) > 10:
+                print(f"    [debug]   ... and {len(files) - 10} more")
 
         # Split into token-limited batches
         batches = self._build_batches(files)
@@ -70,6 +77,7 @@ class CheckRunner:
             try:
                 response = self.client.analyze(prompt, user_msg)
                 findings = response.get("findings", [])
+                summary = response.get("summary", "")
 
                 # Tag every finding with the originating check
                 for f in findings:
@@ -77,6 +85,8 @@ class CheckRunner:
 
                 all_findings.extend(findings)
                 print(f"    → {len(findings)} finding(s)")
+                if summary:
+                    print(f"    AI summary: {summary[:200]}")
 
             except Exception as exc:
                 print(f"::warning::Batch {idx} of '{name}' failed: {exc}")

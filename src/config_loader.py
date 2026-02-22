@@ -25,6 +25,7 @@ DEFAULTS = {
     "custom_checks_dir": "",
     "github_token": "",
     "config_file": "",
+    "debug": False,
 }
 
 ALL_BUILTIN_CHECKS = [
@@ -76,6 +77,7 @@ def load_config():
         "PRGUARD_CUSTOM_CHECKS_DIR": ("custom_checks_dir", "str"),
         "PRGUARD_GITHUB_TOKEN": ("github_token", "str"),
         "PRGUARD_CONFIG_FILE": ("config_file", "str"),
+        "PRGUARD_DEBUG": ("debug", "bool"),
     }
 
     for env_var, (key, kind) in _ENV_MAP.items():
@@ -102,6 +104,14 @@ def load_config():
 
     # --- Load check definitions (prompt + config) ------------------------
     config["check_definitions"] = _load_check_definitions(config)
+
+    # Log check loading result
+    loaded = list(config["check_definitions"].keys())
+    if len(loaded) < len(config["enabled_checks"]):
+        missing = set(config["enabled_checks"]) - set(loaded)
+        print(f"::warning::Failed to load checks: {', '.join(missing)}")
+    if config.get("debug"):
+        print(f"  [debug] Loaded check definitions: {', '.join(loaded)}")
 
     return config
 
