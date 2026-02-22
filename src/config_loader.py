@@ -28,6 +28,7 @@ DEFAULTS = {
     "config_file": "",
     "request_delay_ms": 0,
     "temperature": 0.1,
+    "api_timeout": 300,
     "debug": False,
 }
 
@@ -83,6 +84,7 @@ def load_config():
         "PRGUARD_CONFIG_FILE": ("config_file", "str"),
         "PRGUARD_REQUEST_DELAY_MS": ("request_delay_ms", "int"),
         "PRGUARD_TEMPERATURE": ("temperature", "float"),
+        "PRGUARD_API_TIMEOUT": ("api_timeout", "int"),
         "PRGUARD_DEBUG": ("debug", "bool"),
     }
 

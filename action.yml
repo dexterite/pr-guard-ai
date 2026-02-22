@@ -110,6 +110,11 @@ inputs:
     default: "0.1"
     required: false
 
+  api-timeout:
+    description: "Timeout in seconds for each AI API call. Increase for slower models (e.g. gpt-5)."
+    default: "300"
+    required: false
+
   debug:
     description: "Enable verbose debug logging (git commands, file filtering, AI responses)"
     default: "false"
@@ -173,6 +178,7 @@ runs:
         PRGUARD_GITHUB_TOKEN:      ${{ inputs.github-token }}
         PRGUARD_REQUEST_DELAY_MS:   ${{ inputs.request-delay-ms }}
         PRGUARD_TEMPERATURE:       ${{ inputs.temperature }}
+        PRGUARD_API_TIMEOUT:       ${{ inputs.api-timeout }}
         PRGUARD_DEBUG:             ${{ inputs.debug }}
         PRGUARD_ACTION_PATH:       ${{ github.action_path }}
       run: python -u "${{ github.action_path }}/src/main.py"

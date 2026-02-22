@@ -23,7 +23,7 @@ class AIClient:
         base_url: str = "https://api.openai.com/v1",
         model: str = "gpt-4o",
         max_retries: int = 5,
-        timeout: int = 180,
+        timeout: int = 300,
         request_delay_ms: int = 0,
         temperature: float = 0.1,
     ):

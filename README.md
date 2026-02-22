@@ -72,6 +72,7 @@ That's it. All 5 checks run on changed files and the report appears in the Actio
 | `github-token` | no | — | For PR comments (`secrets.GITHUB_TOKEN`) |
 | `request-delay-ms` | no | `0` | Minimum delay (ms) between API calls; also auto-ramps on 429 |
 | `temperature` | no | `0.1` | AI sampling temperature (`0.0`–`1.0`). Lower = more deterministic. |
+| `api-timeout` | no | `300` | Timeout in seconds per AI call. Increase for slower models like gpt-5. |
 | `debug` | no | `false` | Verbose logging (git commands, file filtering, AI responses) |
 
 ## Outputs
