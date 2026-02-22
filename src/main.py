@@ -45,6 +45,7 @@ def main():
         print(f"  Request delay : {delay}ms (+ adaptive on 429)")
     else:
         print(f"  Request delay : adaptive only (ramps on 429)")
+    print(f"  Temperature   : {config.get('temperature', 0.1)}")
     print(f"  Debug         : {config.get('debug', False)}")
 
     if not config["enabled_checks"]:

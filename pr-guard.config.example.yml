@@ -55,3 +55,7 @@ checks:
 # Full scan mode — analyse ALL tracked files, not just the git diff.
 # Overrides the diff-only action input when set to true.
 # full_scan: true
+
+# AI sampling temperature (0.0 = deterministic, 1.0 = creative).
+# Lower values give more consistent, reproducible results.
+# temperature: 0.1

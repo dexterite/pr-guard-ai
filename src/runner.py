@@ -19,6 +19,7 @@ class CheckRunner:
             base_url=config["api_base_url"],
             model=config["model"],
             request_delay_ms=config.get("request_delay_ms", 0),
+            temperature=config.get("temperature", 0.1),
         )
 
     # ------------------------------------------------------------------

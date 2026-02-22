@@ -105,6 +105,11 @@ inputs:
     default: "0"
     required: false
 
+  temperature:
+    description: "AI sampling temperature (0.0 = deterministic, 1.0 = creative). Lower is better for code review."
+    default: "0.1"
+    required: false
+
   debug:
     description: "Enable verbose debug logging (git commands, file filtering, AI responses)"
     default: "false"
@@ -167,6 +172,7 @@ runs:
         PRGUARD_EXCLUDE_PATTERNS:  ${{ inputs.exclude-patterns }}
         PRGUARD_GITHUB_TOKEN:      ${{ inputs.github-token }}
         PRGUARD_REQUEST_DELAY_MS:   ${{ inputs.request-delay-ms }}
+        PRGUARD_TEMPERATURE:       ${{ inputs.temperature }}
         PRGUARD_DEBUG:             ${{ inputs.debug }}
         PRGUARD_ACTION_PATH:       ${{ github.action_path }}
       run: python -u "${{ github.action_path }}/src/main.py"

@@ -27,6 +27,7 @@ DEFAULTS = {
     "github_token": "",
     "config_file": "",
     "request_delay_ms": 0,
+    "temperature": 0.1,
     "debug": False,
 }
 
@@ -81,6 +82,7 @@ def load_config():
         "PRGUARD_GITHUB_TOKEN": ("github_token", "str"),
         "PRGUARD_CONFIG_FILE": ("config_file", "str"),
         "PRGUARD_REQUEST_DELAY_MS": ("request_delay_ms", "int"),
+        "PRGUARD_TEMPERATURE": ("temperature", "float"),
         "PRGUARD_DEBUG": ("debug", "bool"),
     }
 
@@ -93,6 +95,11 @@ def load_config():
         elif kind == "int":
             try:
                 config[key] = int(raw)
+            except ValueError:
+                pass
+        elif kind == "float":
+            try:
+                config[key] = float(raw)
             except ValueError:
                 pass
         elif kind == "csv":

@@ -25,12 +25,14 @@ class AIClient:
         max_retries: int = 5,
         timeout: int = 180,
         request_delay_ms: int = 0,
+        temperature: float = 0.1,
     ):
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.max_retries = max_retries
         self.timeout = timeout
+        self.temperature = temperature
 
         # --- Throttle state -----------------------------------------------
         self._base_delay_s = request_delay_ms / 1000.0  # user-configured floor
@@ -105,7 +107,7 @@ class AIClient:
         payload = {
             "model": self.model,
             "messages": messages,
-            "temperature": 0.1,
+            "temperature": self.temperature,
             "response_format": {"type": "json_object"},
         }
 

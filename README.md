@@ -71,6 +71,7 @@ That's it. All 5 checks run on changed files and the report appears in the Actio
 | `exclude-patterns` | no | — | Comma-separated globs to exclude |
 | `github-token` | no | — | For PR comments (`secrets.GITHUB_TOKEN`) |
 | `request-delay-ms` | no | `0` | Minimum delay (ms) between API calls; also auto-ramps on 429 |
+| `temperature` | no | `0.1` | AI sampling temperature (`0.0`–`1.0`). Lower = more deterministic. |
 | `debug` | no | `false` | Verbose logging (git commands, file filtering, AI responses) |
 
 ## Outputs
